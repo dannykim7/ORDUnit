@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.webjjang.notice.mapper.NoticeMapper">
+	<!-- // 1-1. 리스트 -->
+	<select id="list" resultType="com.webjjang.notice.vo.NoticeVO">
+		select no, title, startDate, endDate, updateDate
+		from(
+		select rownum
+		rnum, no, title, startDate, endDate, updateDate
+		from (
+		select no, title,
+		startDate, endDate, updateDate
+		from notice
+		where 1=1
+		<include refid="search" />
+		order by updateDate desc
+		)
+		)
+		where rnum between #{startRow} and #{endRow}
+	</select>
+	<!-- // 1-2. 전체 데이터 개수 -->
+	<select id="getTotalRow" resultType="long">
+		select count(*) from notice
+		where 1=1
+		<include refid="search" />
+		<include refid="searchPeriod" />
+	</select>
+
+	<!-- 검색 조건 처리를 위한 태그 - 부분 태그 : sql(동적 쿼리 작성) -->
+	<sql id="search">
+		<if test="word != null and word != ''.toString()">
+			and (
+			<if test="key =='t'.toString()">
+				title like '%' || #{word} || '%'
+			</if>
+			<if test="key =='c'.toString()">
+				content like '%' || #{word} || '%'
+			</if>
+			<if test="key =='tc'.toString()">
+				content like '%' || #{word} || '%'
+				or title like '%' ||
+				#{word} || '%'
+			</if>
+			)
+		</if>
+	</sql>
+
+	<sql id="searchPeriod">
+		and (
+		<if test="period =='pre'">
+		<!-- 부등호를 써야하기떄문에 마이바티스에서 CDATA 사용 -->
+		<![CDATA[
+				startDate <= sysdate and endDate >= trunc(sysdate)
+			]]>
+		</if>
+		<if test="period =='old'">
+		<![CDATA[
+				endDate < trunc(sysdate)
+			]]>
+		</if>
+		<if test="period =='res'">
+		<![CDATA[
+				startDate > sysdate
+			]]>
+		</if>
+		<if test="period =='all'">
+		<![CDATA[
+				1=1
+			]]>
+		</if>
+		)
+	</sql>
+
+	<!-- // 2. 보기 -->
+	<select id="view" resultType="com.webjjang.notice.vo.NoticeVO">
+		select no, title, content,
+		startDate, endDate, updateDate, writeDate
+		from notice
+		where no = #{no}
+	</select>
+	<!-- // 3. 글쓰기 -->
+	<insert id="write">
+		insert into notice(no, title, content, startDate,
+		endDate)
+		values(notice_seq.nextval, #{title}, #{content}, #{startDate},
+		#{endDate})
+	</insert>
+	<!-- // 4. 글수정 -->
+	<update id="update">
+		update notice
+		set title = #{title}, content =
+		#{content},
+		startDate = #{startDate}, endDate = #{endDate}, updateDate = sysdate
+		where no =
+		#{no}
+	</update>
+	<!-- // 5. 글삭제 -->
+	<delete id="delete">
+		delete from notice
+		where no = #{no}
+	</delete>
+</mapper>

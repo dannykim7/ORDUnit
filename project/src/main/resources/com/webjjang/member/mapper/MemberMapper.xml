@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.webjjang.member.mapper.MemberMapper">
+	<!-- // 1-1. 리스트 -->
+	<select id="list" resultType="com.webjjang.member.vo.MemberVO">
+	select id, name, birth, gender, tel, email, status, gradeNo, gradeName, photo
+	from(
+		select rownum rnum, id, name, birth, gender, tel, email, status, gradeNo, gradeName, photo
+		from(
+			select m.id, m.name, m.birth, m.gender, m.tel, m.email, m.status, m.gradeNo, g.gradeName, m.photo
+			from member m, grade g
+			where 1 = 1
+			<include refid="search"/>
+			and m.gradeNo = g.gradeNo
+			order by id
+		)
+	)
+	where rnum between #{startRow} and #{endRow}
+	</select>
+	
+	<!-- // 1-2. 전체 데이터 개수 -->
+	<select id="getTotalRow" resultType="long">
+		select count(*) from member
+		where 1 = 1
+		<include refid="search"/>
+	</select>
+	
+	<!-- 검색 조건 처리를 위한 태그 - 부분 태그 : sql :: 동적 쿼리 작성-->
+	<sql id="search">
+		<if test="word != null and word != ''.toString">
+			and(
+			<!-- 문자열 글자가 하나일 때 문자로 인식해서 tostring() 써야한다. -->
+			<if test="key == 't'.toString()">
+				title like '%' || #{word} || '%'
+			</if>
+			<if test="key == 'c'.toString()">
+				content like '%' || #{word} || '%'
+			</if>
+			<if test="key == 'w'.toString()">
+				writer like '%' || #{word} || '%'
+			</if>
+			<if test="key == 'tc'">
+				title like '%' || #{word} || '%'
+				or content like '%' || #{word} || '%'
+			</if>
+			<if test="key == 'tw'">
+				title like '%' || #{word} || '%'
+				or writer like '%' || #{word} || '%'
+			</if>
+			<if test="key == 'cw'">
+				content like '%' || #{word} || '%'
+				or writer like '%' || #{word} || '%'
+			</if>
+			<if test="key == 'tcw'">
+				title like '%' || #{word} || '%'
+				or content like '%' || #{word} || '%'
+				or writer like '%' || #{word} || '%'
+			</if>
+			)
+		</if>
+	</sql>
+	
+	<!-- // 2-1. 보기 -->
+	<select id="view" resultType="com.webjjang.member.vo.MemberVO">
+		select m.id, m.name, m.birth, m.gender, m.tel, m.email, m.status,
+		 m.gradeNo, g.gradeName, m.photo, m.regDate
+		from member m, grade g
+		where (id = #{id}) and (m.gradeNo = g.gradeNo)
+	</select>
+	
+	<!-- // 3. 회원가입 -->
+	<insert id="write">
+		insert into member(id, pw, name, gender, birth, tel, email, photo)
+		values(#{id}, #{pw}, #{name}, #{gender}, #{birth}, #{tel}, #{email}, #{photo})
+	</insert>
+	
+	<!-- // 4. 수정 -->
+	<update id="update">
+		update member set title = #{title}, content = #{content}, writer = #{writer}
+		where no = #{no}
+	</update>
+	
+	<!-- // 5. 탈퇴 -->
+	<delete id="delete">
+		delete from member
+		where no = #{no}
+	</delete>
+	
+	<!-- // 6. 로그인 처리 -->
+	<select id="login" resultType="com.webjjang.member.vo.LoginVO">
+		select m.id, m.name, m.gradeNo, g.gradeName, m.photo
+		from member m, grade g
+		where (id = #{id} and pw = #{pw}) and (m.gradeNo = g.gradeNo)
+	</select>
+	
+	<!-- // 7. 아이디 중복 체크 -->
+	<select id="idCheck" resultType="java.lang.String">
+		select id from member
+		where id = #{id}
+	</select>
+	
+	<!-- // 8. 상태 변경 -->
+	<update id="changeStatus">
+		update member
+		set status = #{status}
+		where id = #{id}
+	</update>
+	
+	<!-- <!— // 8. 등급 변경 —> -->
+	<update id="changeGradeNo">
+		update member
+		set gradeNo = #{gradeNo}
+		where id = #{id}
+	</update>
+</mapper>

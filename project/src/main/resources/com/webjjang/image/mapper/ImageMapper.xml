@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.webjjang.image.mapper.ImageMapper">
+	<!-- 1-1.리스트 -->
+	<select id="list" resultType="com.webjjang.image.vo.ImageVO">
+		select no, title, id, name, writeDate, fileName
+		from (
+		select rownum rnum, no, title, id, name, writeDate, fileName
+		from(
+		<!-- 이름만 멤버꺼 -->
+		select i.no, i.title, i.id, m.name, i.writeDate, i.fileName
+		from image
+		i, member m
+		<!-- pk == fk join 조건 -->
+		where (1 = 1) 
+		<include refid="search"/>
+		and(i.id = m.id)
+		order by i.no desc
+		)
+		)
+		where rnum between #{startRow} and #{endRow}
+	</select>
+	<!-- <!— // 1-2.전체 데이터 개수 —> -->
+	<select id="getTotalRow" resultType="long">
+		select count(*) from image
+		where (1 = 1)
+		<include refid="search"/>
+	</select>
+	<!-- 검색 조건 처리를 위한 태그 - 부분 태그 : sql(동적 쿼리 작성)-->
+	<sql id="search">
+		<if test="word != null and word != ''.toString()">
+			and(
+			<if test="key =='t'.toString()">
+				title like '%' || #{word} || '%'
+			</if>
+			<if test="key =='c'.toString()">
+				content like '%' || #{word} || '%'
+			</if>
+			<if test="key =='f'.toString()">
+				fileName like '%' || #{word} || '%'
+			</if>
+			<if test="key =='tc'.toString()">
+				title like '%' || #{word} || '%'
+				or content like '%' || #{word} || '%'
+			</if>
+			<if test="key =='tf'.toString()">
+				title like '%' || #{word} || '%'
+				or fileName like '%' || #{word} || '%'
+			</if>
+			<if test="key =='cf'.toString()">
+				content like '%' || #{word} || '%'
+				or fileName like '%' || #{word} || '%'
+			</if>
+			<if test="key =='tcf'.toString()">
+				title like '%' || #{word} || '%'
+				or content like '%' || #{word} || '%'
+				or fileName like '%' || #{word} || '%'
+			</if>
+			)
+		</if>
+	</sql>
+	<!-- 2. 이미지 보기 -->
+	<select id="view" resultType="com.webjjang.image.vo.ImageVO">
+		select i.no, i.title, i.content, i.id, m.name, i.writeDate, i.fileName
+		from image i, member m
+		where(no = #{no}) and (m.id = i.id)
+	</select>
+	
+	<!-- 2-1. 이미지 파일명 변경 -->
+	<update id="changeImage">
+		update image
+		set fileName = #{fileName}
+		where no = #{no}
+	</update>
+	<!-- 3. 이미지 등록 -->
+	<insert id="write">
+		insert into image(no, title, content, id, fileName)
+		values(image_seq.nextval, #{title}, #{content}, #{id}, #{fileName})
+	</insert>
+	<!-- 4. 이미지 정보수정 -->
+	<update id="update">
+		update image 
+		set title = #{title}, content = #{content}
+		where no = #{no}
+	</update>
+	<!-- 5. 이미지 정보 삭제 -->
+	<delete id="delete">
+	delete from image
+	where no = #{no}
+	</delete>
+</mapper>
